@@ -1,22 +1,20 @@
-t = []
-if get_option('plugins')
-  foreach i : ['bb', 'empty', 'inline', 'insn', 'mem', 'syscall']
-    if host_os == 'windows'
-      t += shared_module(i, files(i + '.c') + '../../contrib/plugins/win32_linker.c',
-                        include_directories: '../../include/qemu',
-                        link_depends: [win32_qemu_plugin_api_lib],
-                        link_args: ['-Lplugins', '-lqemu_plugin_api'],
-                        dependencies: glib)
+project('qemu-plugins', 'c')
 
-    else
-      t += shared_module(i, files(i + '.c'),
-                        include_directories: '../../include/qemu',
-                        dependencies: glib)
-    endif
-  endforeach
-endif
-if t.length() > 0
-  alias_target('test-plugins', t)
-else
-  run_target('test-plugins', command: find_program('true'))
-endif
+glib_dep = dependency('glib-2.0')
+qemu_inc = include_directories('/nfs/home/yanyue/tools/qemu/include/qemu')
+
+plugins = ['bb', 'empty', 'inline', 'insn', 'mem', 'syscall']
+
+foreach plugin : plugins
+  shared_module(plugin,
+    sources: plugin + '.c',
+    include_directories: qemu_inc,
+    dependencies: glib_dep,
+    name_prefix: 'lib',
+    install: false
+  )
+endforeach
+
+run_target('run',
+  command: ['qemu-riscv64', '-plugin', './libinsn.so,match=ecall', '-d', 'plugin', '/nfs/home/yanyue/tests/riscv_tests/hello']
+)
